@@ -12,10 +12,6 @@ load_dotenv(BASE_DIR / ".env")
 
 app = Flask(__name__, static_folder=str(BASE_DIR), static_url_path="")
 
-@app.route('/')
-def home():
-    return "Funcionando!"
-
 @app.after_request
 def allow_local_frontend(response):
     origin = request.headers.get("Origin")
