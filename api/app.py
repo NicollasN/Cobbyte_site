@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from flask import Flask, jsonify, request, send_from_directory
 
 
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
 app = Flask(__name__, static_folder=str(BASE_DIR), static_url_path="")
@@ -24,7 +24,7 @@ def allow_local_frontend(response):
 
 @app.get("/")
 def home():
-    return send_from_directory(BASE_DIR, "./index.html")
+    return send_from_directory(BASE_DIR, "index.html")
 
 
 @app.post("/api/contact")
