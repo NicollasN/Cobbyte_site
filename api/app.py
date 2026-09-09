@@ -24,7 +24,7 @@ def allow_local_frontend(response):
 
 @app.get("/")
 def home():
-    return send_from_directory(BASE_DIR, "index.html")
+    return send_from_directory(BASE_DIR, "./index.html")
 
 
 @app.post("/api/contact")
