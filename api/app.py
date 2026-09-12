@@ -10,6 +10,25 @@ from flask import Flask, jsonify, request, send_from_directory
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
+
+def normalize_env_value(value):
+    if value is None:
+        return ""
+    return str(value).strip().replace(" ", "").replace("\n", "").replace("\r", "")
+
+
+def has_email_config(smtp_host, smtp_port, smtp_user, smtp_password, contact_email):
+    return all(
+        (
+            normalize_env_value(smtp_host),
+            normalize_env_value(smtp_port),
+            normalize_env_value(smtp_user),
+            normalize_env_value(smtp_password),
+            normalize_env_value(contact_email),
+        )
+    )
+
+
 app = Flask(__name__, static_folder=str(BASE_DIR), static_url_path="")
 
 @app.after_request
@@ -41,13 +60,13 @@ def contact():
     if len(name) > 120 or len(sender_email) > 254 or len(service) > 120 or len(message) > 5000:
         return jsonify(error="Um dos campos excede o tamanho permitido."), 400
 
-    smtp_host = os.getenv("SMTP_HOST")
-    smtp_port = int(os.getenv("SMTP_PORT", "587"))
-    smtp_user = os.getenv("SMTP_USER")
-    smtp_password = os.getenv("SMTP_PASSWORD")
-    contact_email = os.getenv("CONTACT_EMAIL")
+    smtp_host = normalize_env_value(os.getenv("SMTP_HOST"))
+    smtp_port = int(normalize_env_value(os.getenv("SMTP_PORT", "587")) or "587")
+    smtp_user = normalize_env_value(os.getenv("SMTP_USER"))
+    smtp_password = normalize_env_value(os.getenv("SMTP_PASSWORD"))
+    contact_email = normalize_env_value(os.getenv("CONTACT_EMAIL"))
 
-    if not all((smtp_host, smtp_user, smtp_password, contact_email)):
+    if not has_email_config(smtp_host, smtp_port, smtp_user, smtp_password, contact_email):
         return jsonify(error="O envio de e-mail ainda não está configurado no servidor."), 500
 
     email = EmailMessage()
