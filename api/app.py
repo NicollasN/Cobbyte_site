@@ -47,7 +47,7 @@ def build_email_html(name, sender_email, service, message):
             <td style="background-color:#1a1a1a; padding: 24px 32px; text-align:center;">
               <img src="cid:banner_cobbyte"
                    alt="Cobbyte"
-                   width="180"
+                   width="300"
                    style="display:block; margin:0 auto; max-width:180px; height:auto;">
             </td>
           </tr>
