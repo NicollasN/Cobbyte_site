@@ -29,6 +29,80 @@ def has_email_config(smtp_host, smtp_port, smtp_user, smtp_password, contact_ema
     )
 
 
+def build_email_html(name, sender_email, service, message):
+    return f"""\
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+</head>
+<body style="margin:0; padding:0; background-color:#f4f4f7; font-family: Arial, Helvetica, sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f7; padding: 30px 0;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:8px; overflow:hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+
+          <!-- Banner -->
+          <tr>
+            <td style="background-color:#1a1a1a; padding: 24px 32px; text-align:center;">
+              <img src="cid:banner_cobbyte"
+                   alt="Cobbyte"
+                   width="180"
+                   style="display:block; margin:0 auto; max-width:180px; height:auto;">
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding: 32px;">
+              <h2 style="margin:0 0 20px; color:#1a1a2e; font-size:18px;">Nova solicitação de serviço</h2>
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 20px;">
+                <tr>
+                  <td style="padding: 8px 0; color:#666; font-size:14px; width:140px;"><strong>Nome:</strong></td>
+                  <td style="padding: 8px 0; color:#1a1a2e; font-size:14px;">{name}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color:#666; font-size:14px;"><strong>E-mail:</strong></td>
+                  <td style="padding: 8px 0; font-size:14px;">
+                    <a href="mailto:{sender_email}" style="color:#7c5cff; text-decoration:none;">{sender_email}</a>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color:#666; font-size:14px;"><strong>Tipo de serviço:</strong></td>
+                  <td style="padding: 8px 0; font-size:14px;">
+                    <span style="background-color:#f0ecff; color:#7c5cff; padding: 4px 10px; border-radius: 12px; font-size:12px; font-weight:bold;">{service}</span>
+                  </td>
+                </tr>
+              </table>
+
+              <div style="background-color:#f9f9fb; border-left: 4px solid #7c5cff; padding: 16px 20px; border-radius: 4px;">
+                <p style="margin:0 0 6px; color:#666; font-size:12px; text-transform:uppercase; letter-spacing:0.5px;">Descrição</p>
+                <p style="margin:0; color:#1a1a2e; font-size:14px; line-height:1.5;">{message}</p>
+              </div>
+
+              <div style="margin-top: 28px;">
+                <a href="mailto:{sender_email}" style="display:inline-block; background-color:#7c5cff; color:#ffffff; text-decoration:none; padding: 12px 24px; border-radius: 6px; font-size:14px; font-weight:bold;">Responder ao cliente</a>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 20px 32px; background-color:#f9f9fb; border-top:1px solid #eee;">
+              <p style="margin:0; color:#999; font-size:12px;">Este e-mail foi gerado automaticamente pelo site da Cobbyte.</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+"""
+
+
 app = Flask(__name__, static_folder=str(BASE_DIR), static_url_path="")
 
 @app.after_request
@@ -74,12 +148,26 @@ def contact():
     email["From"] = smtp_user
     email["To"] = contact_email
     email["Reply-To"] = sender_email
+
+    # Versão texto simples (fallback)
     email.set_content(
         f"Nome: {name}\n"
         f"E-mail: {sender_email}\n"
         f"Tipo de serviço: {service}\n\n"
         f"Descrição:\n{message}"
     )
+
+    # Versão HTML (preferida pela maioria dos clientes de e-mail)
+    email.add_alternative(build_email_html(name, sender_email, service, message), subtype="html")
+
+    # Embute o banner na parte HTML, referenciado via cid:banner_cobbyte
+    banner_path = BASE_DIR / "api" / "assets" / "banner_cobbyte.png"
+    try:
+        with open(banner_path, "rb") as f:
+            html_part = email.get_payload()[1]  # a parte "text/html" criada acima
+            html_part.add_related(f.read(), maintype="image", subtype="png", cid="banner_cobbyte")
+    except FileNotFoundError:
+        app.logger.warning("Banner não encontrado em %s. E-mail será enviado sem imagem.", banner_path)
 
     try:
         with smtplib.SMTP(smtp_host, smtp_port, timeout=20) as smtp:
